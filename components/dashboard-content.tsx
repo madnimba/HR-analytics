@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Users, TrendingUp, Clock, Target, UserCheck, Star, Award, Heart } from "lucide-react"
@@ -28,584 +29,593 @@ interface DashboardContentProps {
   activeSection: string
 }
 
-// Dashboard Data
-const companyStats = [
-  { label: "Total Employees", value: "3,000", icon: Users, color: "from-blue-500 to-blue-600" },
-  { label: "Avg. Tenure", value: "2.7 Years", icon: Clock, color: "from-emerald-500 to-emerald-600" },
-  { label: "HR Health Index", value: "87%", icon: TrendingUp, color: "from-violet-500 to-violet-600" },
-]
+// Data generation utilities
+const departments = ['Engineering', 'Sales', 'Marketing', 'HR', 'Finance', 'Support', 'Operations']
 
-// Monthly Growth Data
-const monthlyGrowthData = [
-  { month: "Jan 2024", hires: 45, departures: 32 },
-  { month: "Feb 2024", hires: 52, departures: 28 },
-  { month: "Mar 2024", hires: 38, departures: 35 },
-  { month: "Apr 2024", hires: 61, departures: 29 },
-  { month: "May 2024", hires: 48, departures: 41 },
-  { month: "Jun 2024", hires: 55, departures: 33 },
-  { month: "Jul 2024", hires: 42, departures: 38 },
-  { month: "Aug 2024", hires: 58, departures: 31 },
-  { month: "Sep 2024", hires: 47, departures: 36 },
-  { month: "Oct 2024", hires: 53, departures: 42 },
-  { month: "Nov 2024", hires: 49, departures: 34 },
-  { month: "Dec 2024", hires: 44, departures: 39 },
-]
+// Seeded random function for consistent data generation
+const seededRandom = (seed: string) => {
+  let hash = 0
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash // Convert to 32bit integer
+  }
+  const x = Math.sin(Math.abs(hash)) * 10000
+  return x - Math.floor(x)
+}
 
-// Cost Breakdown Data
-const costBreakdownData = [
-  { quarter: "Q1", training: 0.2, payroll: 2.8, benefits: 0.6, overhead: 0.24 },
-  { quarter: "Q2", training: 0.25, payroll: 2.9, benefits: 0.65, overhead: 0.26 },
-  { quarter: "Q3", training: 0.22, payroll: 3.0, benefits: 0.62, overhead: 0.28 },
-  { quarter: "Q4", training: 0.28, payroll: 3.1, benefits: 0.68, overhead: 0.25 },
-]
+const generateTimelineData = (months: number, baseValue: number, variance: number = 0.1, seed: string = '') => {
+  const data = []
+  const now = new Date()
+  
+  for (let i = months - 1; i >= 0; i--) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const monthName = date.toLocaleString('default', { month: 'short', year: 'numeric' })
+    const randomFactor = 1 + (seededRandom(`${seed}-${i}`) - 0.5) * variance
+    data.push({
+      month: monthName,
+      value: Math.round(baseValue * randomFactor)
+    })
+  }
+  return data
+}
 
-// Satisfaction Data
-const satisfactionData = [
-  { department: "HR", score: 4.2 },
-  { department: "Marketing", score: 3.8 },
-  { department: "Engineering", score: 4.1 },
-  { department: "Finance", score: 3.9 },
-  { department: "Sales", score: 4.0 },
-]
+const getDepartmentMultiplier = (department: string) => {
+  const multipliers = {
+    'Engineering': 1.2,
+    'Sales': 1.1, 
+    'Marketing': 0.9,
+    'HR': 0.7,
+    'Finance': 0.8,
+    'Support': 0.8,
+    'Operations': 0.9
+  }
+  return multipliers[department as keyof typeof multipliers] || 1.0
+}
 
-// Employee Timeline Data
-const employeeTimelineData = [
-  { month: "Jan 2024", employees: 2890 },
-  { month: "Feb 2024", employees: 2914 },
-  { month: "Mar 2024", employees: 2903 },
-  { month: "Apr 2024", employees: 2935 },
-  { month: "May 2024", employees: 2942 },
-  { month: "Jun 2024", employees: 2964 },
-  { month: "Jul 2024", employees: 2968 },
-  { month: "Aug 2024", employees: 2995 },
-  { month: "Sep 2024", employees: 3006 },
-  { month: "Oct 2024", employees: 3017 },
-  { month: "Nov 2024", employees: 3032 },
-  { month: "Dec 2024", employees: 3000 },
-]
+const getTimelineMultiplier = (timeline: string) => {
+  const multipliers = {
+    'Last 3 months': 0.8,
+    'Last 6 months': 0.9,
+    'Last year': 1.0
+  }
+  return multipliers[timeline as keyof typeof multipliers] || 1.0
+}
 
-// Engagement Data
-const engagementTrendsData = [
-  { month: "Jan 2024", Support: 3.5, Finance: 4.1, HR: 3.8, Marketing: 4.2, Engineering: 4.0, Sales: 3.6 },
-  { month: "Feb 2024", Support: 3.4, Finance: 4.0, HR: 3.9, Marketing: 4.3, Engineering: 4.1, Sales: 3.5 },
-  { month: "Mar 2024", Support: 3.6, Finance: 4.2, HR: 4.0, Marketing: 4.1, Engineering: 4.2, Sales: 3.7 },
-  { month: "Apr 2024", Support: 3.7, Finance: 4.3, HR: 4.1, Marketing: 4.4, Engineering: 4.3, Sales: 3.8 },
-  { month: "May 2024", Support: 3.5, Finance: 4.1, HR: 3.9, Marketing: 4.2, Engineering: 4.1, Sales: 3.6 },
-  { month: "Jun 2024", Support: 3.8, Finance: 4.4, HR: 4.2, Marketing: 4.5, Engineering: 4.4, Sales: 3.9 },
-  { month: "Jul 2024", Support: 3.6, Finance: 4.2, HR: 4.0, Marketing: 4.3, Engineering: 4.2, Sales: 3.7 },
-  { month: "Aug 2024", Support: 3.9, Finance: 4.5, HR: 4.3, Marketing: 4.6, Engineering: 4.5, Sales: 4.0 },
-  { month: "Sep 2024", Support: 3.7, Finance: 4.3, HR: 4.1, Marketing: 4.4, Engineering: 4.3, Sales: 3.8 },
-  { month: "Oct 2024", Support: 4.0, Finance: 4.6, HR: 4.4, Marketing: 4.7, Engineering: 4.6, Sales: 4.1 },
-  { month: "Nov 2024", Support: 3.8, Finance: 4.4, HR: 4.2, Marketing: 4.5, Engineering: 4.4, Sales: 3.9 },
-  { month: "Dec 2024", Support: 3.5, Finance: 4.1, HR: 3.9, Marketing: 4.2, Engineering: 4.1, Sales: 3.6 },
-]
+const filterDataByDepartment = (data: any[], selectedDepartment: string) => {
+  if (selectedDepartment === 'All Departments') return data
+  return data.filter(item => item.department === selectedDepartment)
+}
 
-const npsData = [
-  { department: "Sales", nps: 45 },
-  { department: "Engineering", nps: 62 },
-  { department: "Marketing", nps: 38 },
-  { department: "HR", nps: 41 },
-  { department: "Support", nps: 44 },
-  { department: "Finance", nps: 39 },
-]
+const generateDynamicData = (selectedDepartment: string, selectedTimeline: string) => {
+  const timelineMonths = selectedTimeline === 'Last 3 months' ? 3 : 
+                        selectedTimeline === 'Last 6 months' ? 6 : 12
+  
+  const deptMultiplier = getDepartmentMultiplier(selectedDepartment)
+  const timeMultiplier = getTimelineMultiplier(selectedTimeline)
+  const combinedMultiplier = deptMultiplier * timeMultiplier
+  
+  // Create consistent seed for deterministic random generation
+  const seed = `${selectedDepartment}-${selectedTimeline}`
 
-const heatmapData = [
-  { department: "Engineering", managerRelation: 4.5, workLifeBalance: 4.2 },
-  { department: "Support", managerRelation: 3.8, workLifeBalance: 3.6 },
-  { department: "Marketing", managerRelation: 4.2, workLifeBalance: 4.0 },
-  { department: "HR", managerRelation: 4.0, workLifeBalance: 3.9 },
-  { department: "Finance", managerRelation: 3.9, workLifeBalance: 3.7 },
-  { department: "Sales", managerRelation: 4.3, workLifeBalance: 4.1 },
-]
+  return {
+    // Company Stats
+    companyStats: [
+      { 
+        label: "Total Employees", 
+        value: selectedDepartment === 'All Departments' ? 
+          "3,000" : Math.round(3000 * deptMultiplier / 6).toString(), 
+        icon: Users, 
+        color: "from-blue-500 to-blue-600" 
+      },
+      { 
+        label: "Avg. Tenure", 
+        value: `${(2.7 * combinedMultiplier).toFixed(1)} Years`, 
+        icon: Clock, 
+        color: "from-emerald-500 to-emerald-600" 
+      },
+      { 
+        label: "HR Health Index", 
+        value: `${Math.round(87 * combinedMultiplier)}%`, 
+        icon: TrendingUp, 
+        color: "from-violet-500 to-violet-600" 
+      },
+    ],
 
-// Recruitment Data
-const hiringByDepartment = [
-  { name: "Engineering", value: 45, color: "#3B82F6" },
-  { name: "Sales", value: 30, color: "#10B981" },
-  { name: "Marketing", value: 15, color: "#8B5CF6" },
-  { name: "Operations", value: 10, color: "#F59E0B" },
-]
+    // Monthly Growth Data
+    monthlyGrowthData: generateTimelineData(timelineMonths, 45, 0.3, `${seed}-growth`).map((item, index) => ({
+      month: item.month,
+      hires: Math.round(item.value * combinedMultiplier),
+      departures: Math.round((item.value * 0.7) * combinedMultiplier)
+    })),
 
-const dropoffByStage = [
-  { stage: "Application", candidates: 1200 },
-  { stage: "Screening", candidates: 800 },
-  { stage: "Interview", candidates: 400 },
-  { stage: "Final", candidates: 200 },
-  { stage: "Offer", candidates: 120 },
-  { stage: "Hired", candidates: 90 },
-]
+    // Cost Breakdown Data (quarterly)
+    costBreakdownData: Array.from({length: Math.ceil(timelineMonths / 3)}, (_, i) => ({
+      quarter: `Q${i + 1}`,
+      training: (0.2 * combinedMultiplier).toFixed(2),
+      payroll: (2.8 * combinedMultiplier).toFixed(1),
+      benefits: (0.6 * combinedMultiplier).toFixed(2),
+      overhead: (0.24 * combinedMultiplier).toFixed(2)
+    })),
 
-// Performance Data
-const skillGaps = [
-  { skill: "Leadership", current: 65, required: 85 },
-  { skill: "Technical", current: 80, required: 90 },
-  { skill: "Communication", current: 70, required: 85 },
-  { skill: "Problem Solving", current: 75, required: 88 },
-  { skill: "Teamwork", current: 85, required: 90 },
-  { skill: "Innovation", current: 60, required: 80 },
-]
+    // Satisfaction Data
+    satisfactionData: filterDataByDepartment(departments.map((dept, index) => ({
+      department: dept,
+      score: (3.5 + seededRandom(`${seed}-satisfaction-${dept}`) * 1.0) * (dept === selectedDepartment ? 1.1 : 1.0)
+    })), selectedDepartment),
 
-const performanceMetrics = [
-  { title: "eNPS Score", value: "+42", trend: "+5", color: "emerald" },
-  { title: "Attrition Risk", value: "12%", trend: "-3%", color: "red" },
-  { title: "Performance Rating", value: "4.2/5", trend: "+0.3", color: "blue" },
-  { title: "Goal Achievement", value: "89%", trend: "+7%", color: "violet" },
-]
+    // Employee Timeline Data
+    employeeTimelineData: generateTimelineData(timelineMonths, 2900, 0.05, `${seed}-timeline`).map(item => ({
+      month: item.month,
+      employees: selectedDepartment === 'All Departments' ? 
+        item.value : Math.round(item.value * deptMultiplier / 6)
+    })),
 
-// New Performance Data
-const goalAchievementData = [
-  { name: "Achieved", value: 75, color: "#8B5CF6" },
-  { name: "In Progress", value: 20, color: "#A78BFA" },
-  { name: "Not Started", value: 5, color: "#E0E7FF" },
-]
+    // Engagement Trends Data
+    engagementTrendsData: generateTimelineData(timelineMonths, 4.0, 0.15, `${seed}-engagement`).map(item => {
+      const baseScore = item.value / 1000 // Convert to 0-5 scale
+      return {
+        month: item.month,
+        ...(selectedDepartment === 'All Departments' ? 
+          Object.fromEntries(departments.map(dept => [
+            dept, (baseScore * getDepartmentMultiplier(dept) * 0.9).toFixed(1)
+          ])) :
+          { [selectedDepartment]: (baseScore * deptMultiplier).toFixed(1) }
+        )
+      }
+    }),
 
-const hoursVsOutputData = [
-  { department: "Sales", hoursWorked: 120, outputScore: 85 },
-  { department: "Engineering", hoursWorked: 140, outputScore: 92 },
-  { department: "HR", hoursWorked: 110, outputScore: 78 },
-  { department: "Marketing", hoursWorked: 125, outputScore: 88 },
-  { department: "Support", hoursWorked: 135, outputScore: 82 },
-  { department: "Finance", hoursWorked: 130, outputScore: 90 },
-]
+    // NPS Data
+    npsData: filterDataByDepartment(departments.map((dept, index) => ({
+      department: dept,
+      nps: Math.round((30 + seededRandom(`${seed}-nps-${dept}`) * 40) * (dept === selectedDepartment ? 1.1 : 1.0))
+    })), selectedDepartment),
 
-const departmentRatingsData = [
-  { department: "Engineering", rating: 3.16 },
-  { department: "Sales", rating: 3.5 },
-  { department: "HR", rating: 3.95 },
-  { department: "Marketing", rating: 4.6 },
-  { department: "Support", rating: 3.12 },
-  { department: "Finance", rating: 3.2 },
-]
+    // Heatmap Data
+    heatmapData: filterDataByDepartment(departments.map((dept, index) => ({
+      department: dept,
+      managerRelation: ((3.5 + seededRandom(`${seed}-manager-${dept}`) * 1.5) * (dept === selectedDepartment ? 1.1 : 1.0)).toFixed(1),
+      workLifeBalance: ((3.2 + seededRandom(`${seed}-balance-${dept}`) * 1.3) * (dept === selectedDepartment ? 1.1 : 1.0)).toFixed(1)
+    })), selectedDepartment),
 
-const performanceOverTimeData = [
-  { month: "Jan 2024", rating: 4.0 },
-  { month: "Feb 2024", rating: 4.1 },
-  { month: "Mar 2024", rating: 4.3 },
-  { month: "Apr 2024", rating: 4.5 },
-  { month: "May 2024", rating: 4.2 },
-  { month: "Jun 2024", rating: 4.1 },
-  { month: "Jul 2024", rating: 4.6 },
-  { month: "Aug 2024", rating: 4.4 },
-  { month: "Sep 2024", rating: 4.3 },
-  { month: "Oct 2024", rating: 4.2 },
-  { month: "Nov 2024", rating: 4.4 },
-  { month: "Dec 2024", rating: 4.5 },
-]
+    // Recruitment Data
+    hiringByDepartment: selectedDepartment === 'All Departments' ? [
+      { name: "Engineering", value: Math.round(45 * timeMultiplier), color: "#3B82F6" },
+      { name: "Sales", value: Math.round(30 * timeMultiplier), color: "#10B981" },
+      { name: "Marketing", value: Math.round(15 * timeMultiplier), color: "#8B5CF6" },
+      { name: "Operations", value: Math.round(10 * timeMultiplier), color: "#F59E0B" },
+    ] : [
+      { name: selectedDepartment, value: Math.round(45 * combinedMultiplier), color: "#3B82F6" }
+    ],
 
-const employeeProductivityData = [
-  {
-    employee: "Employee 1",
-    productivity: "$11,800",
-    goalAchieved: "NO",
-    performanceTrend: [4.1, 4.0, 4.2, 4.1, 3.9, 4.0, 4.1],
-    outputTrend: [85, 82, 88, 86, 84, 87, 89],
-  },
-  {
-    employee: "Employee 2",
-    productivity: "$13,250",
-    goalAchieved: "YES",
-    performanceTrend: [3.8, 3.9, 4.1, 4.2, 4.3, 4.1, 4.2],
-    outputTrend: [78, 80, 85, 88, 90, 87, 89],
-  },
-  {
-    employee: "Employee 3",
-    productivity: "$9,700",
-    goalAchieved: "NO",
-    performanceTrend: [3.5, 3.4, 3.6, 3.5, 3.3, 3.4, 3.5],
-    outputTrend: [65, 68, 70, 69, 67, 68, 70],
-  },
-  {
-    employee: "Employee 4",
-    productivity: "$15,600",
-    goalAchieved: "YES",
-    performanceTrend: [4.5, 4.4, 4.6, 4.5, 4.7, 4.6, 4.5],
-    outputTrend: [92, 94, 96, 95, 98, 96, 94],
-  },
-  {
-    employee: "Employee 5",
-    productivity: "$12,450",
-    goalAchieved: "YES",
-    performanceTrend: [4.0, 4.1, 4.0, 4.2, 4.1, 4.0, 4.1],
-    outputTrend: [82, 84, 83, 86, 85, 83, 84],
-  },
-  {
-    employee: "Employee 6",
-    productivity: "$14,800",
-    goalAchieved: "YES",
-    performanceTrend: [4.3, 4.2, 4.4, 4.3, 4.5, 4.4, 4.3],
-    outputTrend: [88, 87, 90, 89, 92, 90, 88],
-  },
-  {
-    employee: "Employee 7",
-    productivity: "$14,200",
-    goalAchieved: "YES",
-    performanceTrend: [4.2, 4.1, 4.3, 4.2, 4.4, 4.3, 4.2],
-    outputTrend: [86, 85, 88, 87, 90, 89, 87],
-  },
-]
+    dropoffByStage: [
+      { stage: "Application", candidates: Math.round(1200 * combinedMultiplier) },
+      { stage: "Screening", candidates: Math.round(800 * combinedMultiplier) },
+      { stage: "Interview", candidates: Math.round(400 * combinedMultiplier) },
+      { stage: "Final", candidates: Math.round(200 * combinedMultiplier) },
+      { stage: "Offer", candidates: Math.round(120 * combinedMultiplier) },
+      { stage: "Hired", candidates: Math.round(90 * combinedMultiplier) },
+    ],
 
-// Learning & Development Data
-const learningMetrics = [
-  {
-    title: "Training Participation Rate",
-    value: "76%",
-    change: "5.5%",
-    previous: "72%",
-    trend: "up",
-  },
-  {
-    title: "Training Hours per Employee",
-    value: "14.2 hours",
-    change: "-6.0%",
-    previous: "15.1 hours",
-    trend: "down",
-  },
-  {
-    title: "Training Completion Rate",
-    value: "85%",
-    change: "-2.3%",
-    previous: "87%",
-    trend: "down",
-  },
-  {
-    title: "Internal Promotion Rate",
-    value: "18%",
-    change: "20%",
-    previous: "15%",
-    trend: "up",
-  },
-]
+    // Performance Data
+    skillGaps: [
+      { skill: "Leadership", current: Math.round(65 * combinedMultiplier), required: 85 },
+      { skill: "Technical", current: Math.round(80 * combinedMultiplier), required: 90 },
+      { skill: "Communication", current: Math.round(70 * combinedMultiplier), required: 85 },
+      { skill: "Problem Solving", current: Math.round(75 * combinedMultiplier), required: 88 },
+      { skill: "Teamwork", current: Math.round(85 * combinedMultiplier), required: 90 },
+      { skill: "Innovation", current: Math.round(60 * combinedMultiplier), required: 80 },
+    ],
 
-const roiTrainingData = [
-  { month: "Jan 2024", roi: 120 },
-  { month: "Feb 2024", roi: 110 },
-  { month: "Mar 2024", roi: 125 },
-  { month: "Apr 2024", roi: 135 },
-  { month: "May 2024", roi: 140 },
-  { month: "Jun 2024", roi: 130 },
-  { month: "Jul 2024", roi: 145 },
-  { month: "Aug 2024", roi: 150 },
-  { month: "Sep 2024", roi: 155 },
-  { month: "Oct 2024", roi: 160 },
-  { month: "Nov 2024", roi: 165 },
-]
+    performanceMetrics: [
+      { title: "eNPS Score", value: `+${Math.round(42 * combinedMultiplier)}`, trend: "+5", color: "emerald" },
+      { title: "Attrition Risk", value: `${Math.round(12 * (2 - combinedMultiplier))}%`, trend: "-3%", color: "red" },
+      { title: "Performance Rating", value: `${(4.2 * combinedMultiplier).toFixed(1)}/5`, trend: "+0.3", color: "blue" },
+      { title: "Goal Achievement", value: `${Math.round(89 * combinedMultiplier)}%`, trend: "+7%", color: "violet" },
+    ],
 
-const skillsImprovementData = [
-  { department: "Sales", preTraining: 3.2, postTraining: 4.1 },
-  { department: "Support", preTraining: 3.5, postTraining: 4.3 },
-  { department: "Engineering", preTraining: 3.8, postTraining: 4.5 },
-  { department: "Marketing", preTraining: 3.4, postTraining: 4.2 },
-  { department: "HR", preTraining: 3.6, postTraining: 4.0 },
-]
+    goalAchievementData: [
+      { name: "Achieved", value: Math.round(75 * combinedMultiplier), color: "#8B5CF6" },
+      { name: "In Progress", value: Math.round(20 * (2 - combinedMultiplier)), color: "#A78BFA" },
+      { name: "Not Started", value: Math.round(5 * (2 - combinedMultiplier)), color: "#E0E7FF" },
+    ],
 
-const allTrainingsData = [
-  { training: "Onboarding", attendees: 1056 },
-  { training: "Soft Skills", attendees: 924 },
-  { training: "Security", attendees: 448 },
-  { training: "Technical", attendees: 387 },
-  { training: "Sales", attendees: 345 },
-  { training: "Product", attendees: 298 },
-  { training: "Communication", attendees: 287 },
-  { training: "Industry", attendees: 94 },
-  { training: "Reskilling", attendees: 84 },
-]
+    hoursVsOutputData: filterDataByDepartment(departments.map((dept, index) => ({
+      department: dept,
+      hoursWorked: Math.round((120 + seededRandom(`${seed}-hours-${dept}`) * 20) * (dept === selectedDepartment ? 1.1 : 1.0)),
+      outputScore: Math.round((75 + seededRandom(`${seed}-output-${dept}`) * 20) * (dept === selectedDepartment ? 1.1 : 1.0))
+    })), selectedDepartment),
 
-const incompleteTrainingsData = [
-  { training: "Onboarding", employees: 34, deadline: "5/20/2025", status: "See more information" },
-  { training: "Soft Skills", employees: 28, deadline: "4/23/2025", status: "See more information" },
-  { training: "Security", employees: 20, deadline: "7/13/2025", status: "See more information" },
-  { training: "Technical", employees: 173, deadline: "8/30/2025", status: "See more information" },
-  { training: "Sales", employees: 38, deadline: "4/30/2025", status: "See more information" },
-  { training: "Product", employees: 40, deadline: "6/7/2025", status: "See more information" },
-  { training: "Communication", employees: 231, deadline: "4/25/2025", status: "See more information" },
-  { training: "Industry", employees: 425, deadline: "9/1/2025", status: "See more information" },
-  { training: "Reskilling", employees: 287, deadline: "10/1/2025", status: "See more information" },
-]
+    departmentRatingsData: filterDataByDepartment(departments.map((dept, index) => ({
+      department: dept,
+      rating: ((3.0 + seededRandom(`${seed}-rating-${dept}`) * 1.5) * (dept === selectedDepartment ? 1.1 : 1.0)).toFixed(2)
+    })), selectedDepartment),
 
-const renderLearning = () => (
-  <div className="space-y-6">
-    {/* Header */}
-    <div className="mb-6">
-      <div className="mb-4">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-700 dark:from-slate-200 dark:via-cyan-400 dark:to-blue-400 bg-clip-text text-transparent">
-          Learning & Development Dashboard
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400 mt-1">
-          Track training programs and employee skill development
-        </p>
-      </div>
-      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-        <select className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm dark:text-slate-200">
-          <option>Last year</option>
-          <option>Last 6 months</option>
-          <option>Last 3 months</option>
-        </select>
-      </div>
-    </div>
+    performanceOverTimeData: generateTimelineData(timelineMonths, 4200, 0.1, `${seed}-performance`).map(item => ({
+      month: item.month,
+      rating: (item.value / 1000 * combinedMultiplier).toFixed(1)
+    })),
 
-    {/* Key Learning Metrics */}
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {learningMetrics.map((metric, index) => (
-        <Card
-          key={index}
-          className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200/60 dark:border-slate-700/60 shadow-xl"
-        >
-          <CardContent className="p-6">
-            <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-4">{metric.title}</h3>
-            <div className="text-4xl font-bold text-slate-800 dark:text-slate-200 mb-2">{metric.value}</div>
-            <div className="flex items-center text-sm">
-              <Badge
-                className={`mr-2 ${metric.trend === "up" ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300" : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300"}`}
-              >
-                {metric.change}
-              </Badge>
-              <span className="text-slate-600 dark:text-slate-400">Versus</span>
-              <span className="ml-2 font-medium text-slate-800 dark:text-slate-200">{metric.previous}</span>
-              <span className="ml-1 text-slate-600 dark:text-slate-400">Previous period</span>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+    // Learning & Development Data
+    learningMetrics: [
+      {
+        title: "Training Participation Rate",
+        value: `${Math.round(76 * combinedMultiplier)}%`,
+        change: "5.5%",
+        previous: `${Math.round(72 * combinedMultiplier)}%`,
+        trend: "up",
+      },
+      {
+        title: "Training Hours per Employee",
+        value: `${(14.2 * combinedMultiplier).toFixed(1)} hours`,
+        change: "-6.0%",
+        previous: `${(15.1 * combinedMultiplier).toFixed(1)} hours`,
+        trend: "down",
+      },
+      {
+        title: "Training Completion Rate",
+        value: `${Math.round(85 * combinedMultiplier)}%`,
+        change: "-2.3%",
+        previous: `${Math.round(87 * combinedMultiplier)}%`,
+        trend: "down",
+      },
+      {
+        title: "Internal Promotion Rate",
+        value: `${Math.round(18 * combinedMultiplier)}%`,
+        change: "20%",
+        previous: `${Math.round(15 * combinedMultiplier)}%`,
+        trend: "up",
+      },
+    ],
 
-    {/* Main Charts Row */}
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* ROI in Training */}
-      <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200/60 dark:border-slate-700/60 shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-slate-800 dark:text-slate-200">ROI in Training (Monthly Overview)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={roiTrainingData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="month" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={80} />
-              <YAxis domain={[80, 180]} tick={{ fontSize: 12 }} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "white",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "8px",
-                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                }}
-              />
-              <Bar dataKey="roi" fill="#8b5cf6" radius={[2, 2, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+    roiTrainingData: generateTimelineData(timelineMonths, 120, 0.2, `${seed}-roi`).map(item => ({
+      month: item.month,
+      roi: Math.round(item.value * combinedMultiplier)
+    })),
 
-      {/* Employee Skills Improvement */}
-      <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200/60 dark:border-slate-700/60 shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-slate-800 dark:text-slate-200">Employee Skills Improvement</CardTitle>
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-purple-500 rounded"></div>
-              <span className="text-slate-600 dark:text-slate-400">Pre-Training Rating</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-cyan-400 rounded"></div>
-              <span className="text-slate-600 dark:text-slate-400">Post-Training Rating</span>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={skillsImprovementData} layout="horizontal">
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis type="number" domain={[0, 5]} tick={{ fontSize: 12 }} />
-              <YAxis type="category" dataKey="department" tick={{ fontSize: 12 }} width={80} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "white",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "8px",
-                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                }}
-              />
-              <Bar dataKey="preTraining" fill="#8b5cf6" radius={[0, 2, 2, 0]} />
-              <Bar dataKey="postTraining" fill="#06b6d4" radius={[0, 2, 2, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+    skillsImprovementData: filterDataByDepartment(departments.map((dept, index) => ({
+      department: dept,
+      preTraining: ((3.0 + seededRandom(`${seed}-pre-${dept}`) * 0.8) * (dept === selectedDepartment ? 1.1 : 1.0)).toFixed(1),
+      postTraining: ((3.8 + seededRandom(`${seed}-post-${dept}`) * 0.7) * (dept === selectedDepartment ? 1.1 : 1.0)).toFixed(1)
+    })), selectedDepartment),
 
-      {/* Employee Feedback Heatmap */}
-      <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200/60 dark:border-slate-700/60 shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-slate-800 dark:text-slate-200">Employee Feedback On Training Programs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-5 gap-2 text-xs">
-              <div></div>
-              <div className="text-center font-medium text-slate-600 dark:text-slate-400">Not Satisfied</div>
-              <div className="text-center font-medium text-slate-600 dark:text-slate-400">Slightly Satisfied</div>
-              <div className="text-center font-medium text-slate-600 dark:text-slate-400">Neutral</div>
-              <div className="text-center font-medium text-slate-600 dark:text-slate-400">Very Satisfied</div>
-            </div>
+    allTrainingsData: [
+      { training: "Onboarding", attendees: Math.round(1056 * combinedMultiplier) },
+      { training: "Soft Skills", attendees: Math.round(924 * combinedMultiplier) },
+      { training: "Security", attendees: Math.round(448 * combinedMultiplier) },
+      { training: "Technical", attendees: Math.round(387 * combinedMultiplier) },
+      { training: "Sales", attendees: Math.round(345 * combinedMultiplier) },
+      { training: "Product", attendees: Math.round(298 * combinedMultiplier) },
+      { training: "Communication", attendees: Math.round(287 * combinedMultiplier) },
+      { training: "Industry", attendees: Math.round(94 * combinedMultiplier) },
+      { training: "Reskilling", attendees: Math.round(84 * combinedMultiplier) },
+    ],
 
-            {/* Onboarding */}
-            <div className="grid grid-cols-5 gap-2 items-center">
-              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">Onboarding</div>
-              <div className="h-8 bg-gradient-to-r from-purple-400 to-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                15%
-              </div>
-              <div className="h-8 bg-gradient-to-r from-blue-400 to-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                25%
-              </div>
-              <div className="h-8 bg-gradient-to-r from-green-400 to-green-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                35%
-              </div>
-              <div className="h-8 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                25%
-              </div>
-            </div>
+    incompleteTrainingsData: [
+      { training: "Onboarding", employees: Math.round(34 * combinedMultiplier), deadline: "5/20/2025", status: "See more information" },
+      { training: "Soft Skills", employees: Math.round(28 * combinedMultiplier), deadline: "4/23/2025", status: "See more information" },
+      { training: "Security", employees: Math.round(20 * combinedMultiplier), deadline: "7/13/2025", status: "See more information" },
+      { training: "Technical", employees: Math.round(173 * combinedMultiplier), deadline: "8/30/2025", status: "See more information" },
+      { training: "Sales", employees: Math.round(38 * combinedMultiplier), deadline: "4/30/2025", status: "See more information" },
+      { training: "Product", employees: Math.round(40 * combinedMultiplier), deadline: "6/7/2025", status: "See more information" },
+      { training: "Communication", employees: Math.round(231 * combinedMultiplier), deadline: "4/25/2025", status: "See more information" },
+      { training: "Industry", employees: Math.round(425 * combinedMultiplier), deadline: "9/1/2025", status: "See more information" },
+      { training: "Reskilling", employees: Math.round(287 * combinedMultiplier), deadline: "10/1/2025", status: "See more information" },
+    ],
 
-            {/* Security */}
-            <div className="grid grid-cols-5 gap-2 items-center">
-              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">Security</div>
-              <div className="h-8 bg-gradient-to-r from-purple-400 to-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                10%
-              </div>
-              <div className="h-8 bg-gradient-to-r from-blue-400 to-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                20%
-              </div>
-              <div className="h-8 bg-gradient-to-r from-green-400 to-green-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                40%
-              </div>
-              <div className="h-8 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                30%
-              </div>
-            </div>
+    // Employee productivity data (sample subset based on filters)
+    employeeProductivityData: Array.from({length: Math.min(7, Math.ceil(7 * combinedMultiplier))}, (_, i) => ({
+      employee: `Employee ${i + 1}`,
+      productivity: `$${(10000 + seededRandom(`${seed}-prod-${i}`) * 8000).toLocaleString()}`,
+      goalAchieved: seededRandom(`${seed}-goal-${i}`) > 0.4 ? "YES" : "NO",
+      performanceTrend: Array.from({length: 7}, (_, j) => (3.0 + seededRandom(`${seed}-trend-${i}-${j}`) * 2.0).toFixed(1)),
+      outputTrend: Array.from({length: 7}, (_, j) => Math.round(60 + seededRandom(`${seed}-output-${i}-${j}`) * 40)),
+    }))
+  }
+}
 
-            {/* Communication */}
-            <div className="grid grid-cols-5 gap-2 items-center">
-              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">Communication</div>
-              <div className="h-8 bg-gradient-to-r from-purple-400 to-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                8%
-              </div>
-              <div className="h-8 bg-gradient-to-r from-blue-400 to-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                18%
-              </div>
-              <div className="h-8 bg-gradient-to-r from-green-400 to-green-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                42%
-              </div>
-              <div className="h-8 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                32%
-              </div>
-            </div>
 
-            {/* Soft Skills */}
-            <div className="grid grid-cols-5 gap-2 items-center">
-              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">Soft Skills</div>
-              <div className="h-8 bg-gradient-to-r from-purple-400 to-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                5%
-              </div>
-              <div className="h-8 bg-gradient-to-r from-blue-400 to-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                15%
-              </div>
-              <div className="h-8 bg-gradient-to-r from-green-400 to-green-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                45%
-              </div>
-              <div className="h-8 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                35%
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
 
-    {/* Bottom Section - Training Tables */}
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* All Trainings */}
-      <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200/60 dark:border-slate-700/60 shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-slate-800 dark:text-slate-200">All Trainings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={allTrainingsData} layout="horizontal">
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis type="number" domain={[0, 1200]} tick={{ fontSize: 12 }} />
-              <YAxis type="category" dataKey="training" tick={{ fontSize: 12 }} width={100} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "white",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "8px",
-                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                }}
-              />
-              <Bar dataKey="attendees" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-          <div className="mt-4 text-center">
-            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Attendees</span>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Incomplete Trainings */}
-      <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200/60 dark:border-slate-700/60 shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-slate-800 dark:text-slate-200">Incomplete Trainings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="text-left py-3 px-2 font-medium text-slate-600 dark:text-slate-400 text-sm">
-                    Training
-                  </th>
-                  <th className="text-left py-3 px-2 font-medium text-slate-600 dark:text-slate-400 text-sm">
-                    Employees
-                  </th>
-                  <th className="text-left py-3 px-2 font-medium text-slate-600 dark:text-slate-400 text-sm">
-                    Deadline
-                  </th>
-                  <th className="text-left py-3 px-2 font-medium text-slate-600 dark:text-slate-400 text-sm">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {incompleteTrainingsData.map((training, index) => (
-                  <tr key={index} className="border-b border-slate-100 dark:border-slate-700/50">
-                    <td className="py-3 px-2 font-medium text-slate-800 dark:text-slate-200 text-sm">
-                      {training.training}
-                    </td>
-                    <td className="py-3 px-2 text-slate-700 dark:text-slate-300 text-sm">{training.employees}</td>
-                    <td className="py-3 px-2 text-slate-700 dark:text-slate-300 text-sm">
-                      <span
-                        className={`${
-                          new Date(training.deadline) < new Date()
-                            ? "text-red-600 dark:text-red-400 font-medium"
-                            : "text-slate-700 dark:text-slate-300"
-                        }`}
-                      >
-                        {training.deadline}
-                      </span>
-                    </td>
-                    <td className="py-3 px-2">
-                      <button className="text-blue-600 dark:text-cyan-400 hover:underline text-sm">
-                        {training.status}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  </div>
-)
 
 // Update the main return statement to use renderLearning instead of renderComingSoon
 export function DashboardContent({ activeSection }: DashboardContentProps) {
+  // State management for filters
+  const [selectedDepartment, setSelectedDepartment] = useState('All Departments')
+  const [selectedTimeline, setSelectedTimeline] = useState('Last year')
+
+  // Generate dynamic data based on current filters
+  const dynamicData = useMemo(() => 
+    generateDynamicData(selectedDepartment, selectedTimeline), 
+    [selectedDepartment, selectedTimeline]
+  )
+
+  const renderLearning = () => (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="mb-4">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-700 dark:from-slate-200 dark:via-cyan-400 dark:to-blue-400 bg-clip-text text-transparent">
+            Learning & Development Dashboard
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
+            Track training programs and employee skill development
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+          <select 
+            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm dark:text-slate-200"
+            value={selectedTimeline}
+            onChange={(e) => setSelectedTimeline(e.target.value)}
+          >
+            <option>Last year</option>
+            <option>Last 6 months</option>
+            <option>Last 3 months</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Key Learning Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {dynamicData.learningMetrics.map((metric: any, index: number) => (
+          <Card
+            key={index}
+            className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200/60 dark:border-slate-700/60 shadow-xl"
+          >
+            <CardContent className="p-6">
+              <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-4">{metric.title}</h3>
+              <div className="text-4xl font-bold text-slate-800 dark:text-slate-200 mb-2">{metric.value}</div>
+              <div className="flex items-center text-sm">
+                <Badge
+                  className={`mr-2 ${metric.trend === "up" ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300" : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300"}`}
+                >
+                  {metric.change}
+                </Badge>
+                <span className="text-slate-600 dark:text-slate-400">Versus</span>
+                <span className="ml-2 font-medium text-slate-800 dark:text-slate-200">{metric.previous}</span>
+                <span className="ml-1 text-slate-600 dark:text-slate-400">Previous period</span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Main Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* ROI in Training */}
+        <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200/60 dark:border-slate-700/60 shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-slate-800 dark:text-slate-200">ROI in Training (Monthly Overview)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={dynamicData.roiTrainingData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={80} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "white",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                  }}
+                />
+                <Bar dataKey="roi" fill="#8b5cf6" radius={[2, 2, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Employee Skills Improvement */}
+        <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200/60 dark:border-slate-700/60 shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-slate-800 dark:text-slate-200">Employee Skills Improvement</CardTitle>
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-purple-500 rounded"></div>
+                <span className="text-slate-600 dark:text-slate-400">Pre-Training Rating</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-cyan-400 rounded"></div>
+                <span className="text-slate-600 dark:text-slate-400">Post-Training Rating</span>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={dynamicData.skillsImprovementData} layout="horizontal">
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis type="number" domain={[0, 5]} tick={{ fontSize: 12 }} />
+                <YAxis type="category" dataKey="department" tick={{ fontSize: 12 }} width={80} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "white",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                  }}
+                />
+                <Bar dataKey="preTraining" fill="#8b5cf6" radius={[0, 2, 2, 0]} />
+                <Bar dataKey="postTraining" fill="#06b6d4" radius={[0, 2, 2, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Employee Feedback Heatmap */}
+        <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200/60 dark:border-slate-700/60 shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-slate-800 dark:text-slate-200">Employee Feedback On Training Programs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-5 gap-2 text-xs">
+                <div></div>
+                <div className="text-center font-medium text-slate-600 dark:text-slate-400">Not Satisfied</div>
+                <div className="text-center font-medium text-slate-600 dark:text-slate-400">Slightly Satisfied</div>
+                <div className="text-center font-medium text-slate-600 dark:text-slate-400">Neutral</div>
+                <div className="text-center font-medium text-slate-600 dark:text-slate-400">Very Satisfied</div>
+              </div>
+
+              {/* Onboarding */}
+              <div className="grid grid-cols-5 gap-2 items-center">
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-300">Onboarding</div>
+                <div className="h-8 bg-gradient-to-r from-purple-400 to-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  15%
+                </div>
+                <div className="h-8 bg-gradient-to-r from-blue-400 to-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  25%
+                </div>
+                <div className="h-8 bg-gradient-to-r from-green-400 to-green-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  35%
+                </div>
+                <div className="h-8 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  25%
+                </div>
+              </div>
+
+              {/* Security */}
+              <div className="grid grid-cols-5 gap-2 items-center">
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-300">Security</div>
+                <div className="h-8 bg-gradient-to-r from-purple-400 to-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  10%
+                </div>
+                <div className="h-8 bg-gradient-to-r from-blue-400 to-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  20%
+                </div>
+                <div className="h-8 bg-gradient-to-r from-green-400 to-green-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  40%
+                </div>
+                <div className="h-8 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  30%
+                </div>
+              </div>
+
+              {/* Communication */}
+              <div className="grid grid-cols-5 gap-2 items-center">
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-300">Communication</div>
+                <div className="h-8 bg-gradient-to-r from-purple-400 to-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  8%
+                </div>
+                <div className="h-8 bg-gradient-to-r from-blue-400 to-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  18%
+                </div>
+                <div className="h-8 bg-gradient-to-r from-green-400 to-green-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  42%
+                </div>
+                <div className="h-8 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  32%
+                </div>
+              </div>
+
+              {/* Soft Skills */}
+              <div className="grid grid-cols-5 gap-2 items-center">
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-300">Soft Skills</div>
+                <div className="h-8 bg-gradient-to-r from-purple-400 to-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  5%
+                </div>
+                <div className="h-8 bg-gradient-to-r from-blue-400 to-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  15%
+                </div>
+                <div className="h-8 bg-gradient-to-r from-green-400 to-green-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  45%
+                </div>
+                <div className="h-8 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                  35%
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bottom Section - Training Tables */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* All Trainings */}
+        <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200/60 dark:border-slate-700/60 shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-slate-800 dark:text-slate-200">All Trainings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart data={dynamicData.allTrainingsData} layout="horizontal">
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis type="number" tick={{ fontSize: 12 }} />
+                <YAxis type="category" dataKey="training" tick={{ fontSize: 12 }} width={100} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "white",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                  }}
+                />
+                <Bar dataKey="attendees" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="mt-4 text-center">
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Attendees</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Incomplete Trainings */}
+        <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200/60 dark:border-slate-700/60 shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-slate-800 dark:text-slate-200">Incomplete Trainings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-700">
+                    <th className="text-left py-3 px-2 font-medium text-slate-600 dark:text-slate-400 text-sm">
+                      Training
+                    </th>
+                    <th className="text-left py-3 px-2 font-medium text-slate-600 dark:text-slate-400 text-sm">
+                      Employees
+                    </th>
+                    <th className="text-left py-3 px-2 font-medium text-slate-600 dark:text-slate-400 text-sm">
+                      Deadline
+                    </th>
+                    <th className="text-left py-3 px-2 font-medium text-slate-600 dark:text-slate-400 text-sm">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dynamicData.incompleteTrainingsData.map((training: any, index: number) => (
+                    <tr key={index} className="border-b border-slate-100 dark:border-slate-700/50">
+                      <td className="py-3 px-2 font-medium text-slate-800 dark:text-slate-200 text-sm">
+                        {training.training}
+                      </td>
+                      <td className="py-3 px-2 text-slate-700 dark:text-slate-300 text-sm">{training.employees}</td>
+                      <td className="py-3 px-2 text-slate-700 dark:text-slate-300 text-sm">
+                        <span
+                          className={`${
+                            new Date(training.deadline) < new Date()
+                              ? "text-red-600 dark:text-red-400 font-medium"
+                              : "text-slate-700 dark:text-slate-300"
+                          }`}
+                        >
+                          {training.deadline}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2">
+                        <button className="text-blue-600 dark:text-cyan-400 hover:underline text-sm">
+                          {training.status}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+
   const renderDashboard = () => (
     <div className="space-y-6">
       {/* Header */}
@@ -616,16 +626,28 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
           </h1>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-          <select className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm dark:text-slate-200">
+          <select 
+            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm dark:text-slate-200"
+            value={selectedTimeline}
+            onChange={(e) => setSelectedTimeline(e.target.value)}
+          >
             <option>Last year</option>
             <option>Last 6 months</option>
             <option>Last 3 months</option>
           </select>
-          <select className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm dark:text-slate-200">
+          <select 
+            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm dark:text-slate-200"
+            value={selectedDepartment}
+            onChange={(e) => setSelectedDepartment(e.target.value)}
+          >
             <option>All Departments</option>
             <option>Engineering</option>
             <option>Sales</option>
             <option>Marketing</option>
+            <option>HR</option>
+            <option>Finance</option>
+            <option>Support</option>
+            <option>Operations</option>
           </select>
         </div>
       </div>
@@ -639,9 +661,9 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
               <Badge className="bg-green-500 text-white">+3.6%</Badge>
             </div>
             <h3 className="text-sm font-medium text-blue-100 mb-1">Total Number of Employees</h3>
-            <div className="text-4xl font-bold mb-2">3,000</div>
+            <div className="text-4xl font-bold mb-2">{dynamicData.companyStats[0].value}</div>
             <div className="flex items-center text-sm text-blue-200">
-              <span>2,890</span>
+              <span>{selectedDepartment === 'All Departments' ? '2,890' : Math.round(2890 * getDepartmentMultiplier(selectedDepartment) / 6).toString()}</span>
               <span className="mx-2">Versus</span>
               <span>Previous period</span>
             </div>
@@ -655,9 +677,9 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
               <Badge className="bg-green-500 text-white">-6.5%</Badge>
             </div>
             <h3 className="text-sm font-medium text-indigo-100 mb-1">Average Time to Fill a Position</h3>
-            <div className="text-4xl font-bold mb-2">29 days</div>
+            <div className="text-4xl font-bold mb-2">{Math.round(29 * (2 - getTimelineMultiplier(selectedTimeline)))} days</div>
             <div className="flex items-center text-sm text-indigo-200">
-              <span>31 days</span>
+              <span>{Math.round(31 * (2 - getTimelineMultiplier(selectedTimeline)))} days</span>
               <span className="mx-2">Versus</span>
               <span>Previous period</span>
             </div>
@@ -671,9 +693,9 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
               <Badge className="bg-green-500 text-white">-2.1%</Badge>
             </div>
             <h3 className="text-sm font-medium text-purple-100 mb-1">Turnover Rate</h3>
-            <div className="text-4xl font-bold mb-2">13.8%</div>
+            <div className="text-4xl font-bold mb-2">{(13.8 * (2 - getDepartmentMultiplier(selectedDepartment) * getTimelineMultiplier(selectedTimeline))).toFixed(1)}%</div>
             <div className="flex items-center text-sm text-purple-200">
-              <span>14.1%</span>
+              <span>{(14.1 * (2 - getDepartmentMultiplier(selectedDepartment) * getTimelineMultiplier(selectedTimeline))).toFixed(1)}%</span>
               <span className="mx-2">Versus</span>
               <span>Previous period</span>
             </div>
@@ -687,9 +709,9 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
               <Badge className="bg-green-500 text-white">+2.4%</Badge>
             </div>
             <h3 className="text-sm font-medium text-violet-100 mb-1">Total Employee Cost</h3>
-            <div className="text-4xl font-bold mb-2">$3.84M</div>
+            <div className="text-4xl font-bold mb-2">${((3.84 * getDepartmentMultiplier(selectedDepartment) * getTimelineMultiplier(selectedTimeline))).toFixed(2)}M</div>
             <div className="flex items-center text-sm text-violet-200">
-              <span>$3.75M</span>
+              <span>${((3.75 * getDepartmentMultiplier(selectedDepartment) * getTimelineMultiplier(selectedTimeline))).toFixed(2)}M</span>
               <span className="mx-2">Versus</span>
               <span>Previous period</span>
             </div>
@@ -719,7 +741,7 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={monthlyGrowthData}>
+              <BarChart data={dynamicData.monthlyGrowthData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
@@ -766,7 +788,7 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={costBreakdownData}>
+              <BarChart data={dynamicData.costBreakdownData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="quarter" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
@@ -801,11 +823,11 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {satisfactionData.map((dept, index) => (
+              {dynamicData.satisfactionData.map((dept, index) => (
                 <div key={index} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{dept.department}</span>
-                    <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{dept.score}</span>
+                    <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{dept.score.toFixed(1)}</span>
                   </div>
                   <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
                     <div
@@ -830,10 +852,10 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={employeeTimelineData}>
+              <LineChart data={dynamicData.employeeTimelineData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis domain={[2800, 3100]} tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "white",
@@ -918,16 +940,28 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-          <select className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm dark:text-slate-200">
+          <select 
+            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm dark:text-slate-200"
+            value={selectedTimeline}
+            onChange={(e) => setSelectedTimeline(e.target.value)}
+          >
             <option>Last year</option>
             <option>Last 6 months</option>
             <option>Last 3 months</option>
           </select>
-          <select className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm dark:text-slate-200">
+          <select 
+            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm dark:text-slate-200"
+            value={selectedDepartment}
+            onChange={(e) => setSelectedDepartment(e.target.value)}
+          >
             <option>All Departments</option>
             <option>Engineering</option>
             <option>Sales</option>
             <option>Marketing</option>
+            <option>HR</option>
+            <option>Finance</option>
+            <option>Support</option>
+            <option>Operations</option>
           </select>
         </div>
       </div>
@@ -1037,7 +1071,7 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={engagementTrendsData}>
+              <LineChart data={dynamicData.engagementTrendsData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                 <YAxis domain={[3, 5]} tick={{ fontSize: 10 }} />
@@ -1049,12 +1083,18 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
                     color: "white",
                   }}
                 />
-                <Line type="monotone" dataKey="Support" stroke="#06b6d4" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="Finance" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="HR" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="Marketing" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="Engineering" stroke="#eab308" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="Sales" stroke="#ec4899" strokeWidth={2} dot={{ r: 3 }} />
+                {selectedDepartment === 'All Departments' ? (
+                  <>
+                    <Line type="monotone" dataKey="Support" stroke="#06b6d4" strokeWidth={2} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="Finance" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="HR" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="Marketing" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="Engineering" stroke="#eab308" strokeWidth={2} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="Sales" stroke="#ec4899" strokeWidth={2} dot={{ r: 3 }} />
+                  </>
+                ) : (
+                  <Line type="monotone" dataKey={selectedDepartment} stroke="#06b6d4" strokeWidth={3} dot={{ r: 4 }} />
+                )}
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
@@ -1082,7 +1122,7 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
                 <div className="text-center">Manager-Employee Relationship Score</div>
                 <div className="text-center">Work-Life Balance Score</div>
               </div>
-              {heatmapData.map((dept, index) => (
+              {dynamicData.heatmapData.map((dept, index) => (
                 <div key={index} className="grid grid-cols-3 gap-4 items-center">
                   <div className="text-sm font-medium text-slate-700 dark:text-slate-300">{dept.department}</div>
                   <div className="flex items-center justify-center">
@@ -1123,7 +1163,7 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={npsData} layout="horizontal">
+            <BarChart data={dynamicData.npsData} layout="horizontal">
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis type="number" domain={[0, 70]} tick={{ fontSize: 12 }} />
               <YAxis type="category" dataKey="department" tick={{ fontSize: 12 }} width={80} />
@@ -1160,14 +1200,14 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={hiringByDepartment}
+                  data={dynamicData.hiringByDepartment}
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
                   dataKey="value"
                   label={({ name, value }) => `${name}: ${value}`}
                 >
-                  {hiringByDepartment.map((entry, index) => (
+                  {dynamicData.hiringByDepartment.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -1184,7 +1224,7 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={dropoffByStage}>
+              <BarChart data={dynamicData.dropoffByStage}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="stage" />
                 <YAxis />
@@ -1241,16 +1281,28 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
           <p className="text-slate-600 dark:text-slate-400 mt-1">Monitor employee performance and skill development</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-          <select className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm dark:text-slate-200">
+          <select 
+            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm dark:text-slate-200"
+            value={selectedTimeline}
+            onChange={(e) => setSelectedTimeline(e.target.value)}
+          >
             <option>Last year</option>
             <option>Last 6 months</option>
             <option>Last 3 months</option>
           </select>
-          <select className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm dark:text-slate-200">
+          <select 
+            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm dark:text-slate-200"
+            value={selectedDepartment}
+            onChange={(e) => setSelectedDepartment(e.target.value)}
+          >
             <option>All Departments</option>
             <option>Engineering</option>
             <option>Sales</option>
             <option>Marketing</option>
+            <option>HR</option>
+            <option>Finance</option>
+            <option>Support</option>
+            <option>Operations</option>
           </select>
         </div>
       </div>
@@ -1315,7 +1367,7 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={goalAchievementData}
+                  data={dynamicData.goalAchievementData}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -1324,7 +1376,7 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
                   startAngle={90}
                   endAngle={450}
                 >
-                  {goalAchievementData.map((entry, index) => (
+                  {dynamicData.goalAchievementData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -1351,7 +1403,7 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={hoursVsOutputData}>
+              <BarChart data={dynamicData.hoursVsOutputData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="department" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
@@ -1382,7 +1434,7 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {departmentRatingsData.map((dept, index) => (
+              {dynamicData.departmentRatingsData.map((dept, index) => (
                 <div key={index} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{dept.department}</span>
@@ -1409,10 +1461,10 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={performanceOverTimeData}>
+              <LineChart data={dynamicData.performanceOverTimeData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                <YAxis domain={[3.8, 4.8]} tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "white",
@@ -1459,7 +1511,7 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
                 </tr>
               </thead>
               <tbody>
-                {employeeProductivityData.map((employee, index) => (
+                {dynamicData.employeeProductivityData.map((employee, index) => (
                   <tr key={index} className="border-b border-slate-100 dark:border-slate-700/50">
                     <td className="py-3 px-4 font-medium text-slate-800 dark:text-slate-200">{employee.employee}</td>
                     <td className="py-3 px-4 text-slate-700 dark:text-slate-300">{employee.productivity}</td>
@@ -1509,7 +1561,7 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <RadarChart data={skillGaps}>
+              <RadarChart data={dynamicData.skillGaps}>
                 <PolarGrid />
                 <PolarAngleAxis dataKey="skill" />
                 <PolarRadiusAxis angle={90} domain={[0, 100]} />
@@ -1523,7 +1575,7 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
 
         {/* Performance KPIs */}
         <div className="space-y-4">
-          {performanceMetrics.map((metric, index) => (
+          {dynamicData.performanceMetrics.map((metric, index) => (
             <Card
               key={index}
               className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200/60 dark:border-slate-700/60 shadow-lg"
