@@ -94,17 +94,55 @@ export function HRBotChat({ currentSection }: HRBotChatProps) {
         throw new Error("Failed to get response")
       }
 
-      const data = await response.json()
+      // Handle streaming response
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error("No response body")
+      }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: data.message,
+        content: "",
         role: "assistant",
         timestamp: new Date(),
       }
 
       setMessages((prev) => [...prev, assistantMessage])
+
+      const decoder = new TextDecoder()
+      let fullResponse = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value)
+        const lines = chunk.split("\n")
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6)
+            if (data === "[DONE]") {
+              break
+            }
+            try {
+              const parsed = JSON.parse(data)
+              if (parsed.type === "text-delta") {
+                fullResponse += parsed.textDelta
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === assistantMessage.id ? { ...msg, content: fullResponse } : msg
+                  )
+                )
+              }
+            } catch (e) {
+              // Ignore parsing errors for incomplete JSON
+            }
+          }
+        }
+      }
     } catch (error) {
+      console.error("Chat error:", error)
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: "I apologize, but I'm having trouble connecting right now. Please try again in a moment.",

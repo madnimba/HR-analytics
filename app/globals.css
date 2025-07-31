@@ -54,13 +54,13 @@
     --border: 51 65 85;
     --input: 51 65 85;
     --ring: 6 182 212;
-    --sidebar-background: 15 23 42;
+    --sidebar-background: 220 13% 18%;
     --sidebar-foreground: 203 213 225;
     --sidebar-primary: 248 250 252;
     --sidebar-primary-foreground: 15 23 42;
-    --sidebar-accent: 30 41 59;
+    --sidebar-accent: 51 65 85;
     --sidebar-accent-foreground: 248 250 252;
-    --sidebar-border: 30 41 59;
+    --sidebar-border: 51 65 85;
     --sidebar-ring: 6 182 212;
   }
 }
@@ -72,6 +72,17 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar for mobile-friendly horizontal scrolling */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Safari and Chrome */
   }
 }
 
@@ -98,9 +109,22 @@
 /* Smooth transitions for all elements */
 * {
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow,
-    transform, filter, backdrop-filter;
+    transform, filter, backdrop-filter, background-image, background-gradient;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 200ms;
+  transition-duration: 0ms;
+}
+
+/* Instant theme transitions */
+html {
+  transition: color-scheme 0ms ease;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+html:not(.dark) {
+  color-scheme: light;
 }
 
 /* Glass morphism effect */

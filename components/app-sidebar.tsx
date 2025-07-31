@@ -56,7 +56,7 @@ export function AppSidebar({ activeSection, setActiveSection }: AppSidebarProps)
   const { theme, toggleTheme } = useTheme()
 
   return (
-    <Sidebar className="border-r border-slate-300/40 dark:border-slate-600/40 bg-gradient-to-b from-slate-200/60 to-blue-100/60 dark:bg-slate-800 backdrop-blur-sm">
+    <Sidebar className="border-r border-slate-300/40 dark:border-slate-600/40 backdrop-blur-sm">
       <SidebarHeader className="p-6 border-b border-slate-300/40 dark:border-slate-600/40">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -64,8 +64,8 @@ export function AppSidebar({ activeSection, setActiveSection }: AppSidebarProps)
               <Building2 className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 dark:from-slate-200 dark:to-slate-400 bg-clip-text text-transparent">
-                Prism Inc.
+              <h2 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 dark:from-slate-200 dark:to-slate-400 bg-clip-text text-transparent">
+                FutureTech
               </h2>
               <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">HR Analytics Portal</p>
             </div>

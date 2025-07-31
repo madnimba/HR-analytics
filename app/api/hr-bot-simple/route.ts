@@ -1,9 +1,8 @@
-import { streamText } from "ai"
+import { generateText } from "ai"
 import { xai } from "@ai-sdk/xai"
 
 export async function POST(req: Request) {
   try {
-    // Check if XAI_API_KEY is available
     if (!process.env.XAI_API_KEY) {
       console.error("XAI_API_KEY is not set")
       return Response.json({ error: "API key not configured" }, { status: 500 })
@@ -11,7 +10,6 @@ export async function POST(req: Request) {
 
     const { message, context, conversationHistory } = await req.json()
 
-    // Build conversation context
     const contextPrompt = getContextPrompt(context)
     const conversationContext = conversationHistory
       .map((msg: any) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`)
@@ -38,7 +36,7 @@ Current user message: ${message}`
     console.log("Making XAI API call with model: x-1")
     
     try {
-      const result = await streamText({
+      const result = await generateText({
         model: xai("x-1"),
         system: systemPrompt,
         prompt: message,
@@ -46,10 +44,9 @@ Current user message: ${message}`
         temperature: 0.7,
       })
 
-      console.log("XAI API call successful, returning streaming response")
+      console.log("XAI API call successful")
       
-      // Return the streaming response directly
-      return result.toDataStreamResponse()
+      return Response.json({ message: result.text })
     } catch (xaiError) {
       console.error("XAI API Error:", xaiError)
       return Response.json({ 
@@ -112,4 +109,4 @@ function getContextPrompt(section: string): string {
   }
 
   return contexts[section as keyof typeof contexts] || "You can help with general HR topics and best practices."
-}
+} 

@@ -325,8 +325,8 @@ const incompleteTrainingsData = [
 const renderLearning = () => (
   <div className="space-y-6">
     {/* Header */}
-    <div className="flex items-center justify-between mb-6">
-      <div>
+    <div className="mb-6">
+      <div className="mb-4">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-700 dark:from-slate-200 dark:via-cyan-400 dark:to-blue-400 bg-clip-text text-transparent">
           Learning & Development Dashboard
         </h1>
@@ -334,7 +334,7 @@ const renderLearning = () => (
           Track training programs and employee skill development
         </p>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
         <select className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm dark:text-slate-200">
           <option>Last year</option>
           <option>Last 6 months</option>
@@ -609,14 +609,13 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
   const renderDashboard = () => (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-700 dark:from-slate-200 dark:via-cyan-400 dark:to-blue-400 bg-clip-text text-transparent">
-            Prism Inc. HR Reporting Dashboard
+      <div className="mb-6">
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-700 dark:from-slate-200 dark:via-cyan-400 dark:to-blue-400 bg-clip-text text-transparent">
+            Reporting Dashboard
           </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">Comprehensive workforce analytics and insights</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <select className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm dark:text-slate-200">
             <option>Last year</option>
             <option>Last 6 months</option>
@@ -909,8 +908,8 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
   const renderEngagement = () => (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
+      <div className="mb-6">
+        <div className="mb-4">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-700 dark:from-slate-200 dark:via-cyan-400 dark:to-blue-400 bg-clip-text text-transparent">
             Employee Engagement Dashboard
           </h1>
@@ -918,7 +917,7 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
             Monitor employee satisfaction and engagement metrics
           </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <select className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm dark:text-slate-200">
             <option>Last year</option>
             <option>Last 6 months</option>
@@ -1234,14 +1233,14 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
   const renderPerformance = () => (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
+      <div className="mb-6">
+        <div className="mb-4">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-700 dark:from-slate-200 dark:via-cyan-400 dark:to-blue-400 bg-clip-text text-transparent">
             Employee Performance Dashboard
           </h1>
           <p className="text-slate-600 dark:text-slate-400 mt-1">Monitor employee performance and skill development</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <select className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm dark:text-slate-200">
             <option>Last year</option>
             <option>Last 6 months</option>
