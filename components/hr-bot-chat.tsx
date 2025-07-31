@@ -101,7 +101,7 @@ export function HRBotChat({ currentSection }: HRBotChatProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message: `${inputValue} be precise and comprehensive while answering`,
+          message: `${inputValue} . When you are answering, be precise and comprehensive while answering`,
           context: currentSection,
           conversationHistory: messages.slice(-5), // Send last 5 messages for context
         }),
