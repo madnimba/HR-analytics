@@ -17,6 +17,20 @@ export async function POST(req: Request) {
         content: msg.content,
       }))
 
+    // Detect if the message contains personal problems or emotional content
+    const personalProblemKeywords = [
+      'stress', 'anxiety', 'depression', 'overwhelmed', 'burnout', 'exhausted',
+      'personal', 'family', 'relationship', 'divorce', 'grief', 'loss',
+      'financial', 'money', 'debt', 'health', 'medical', 'sick',
+      'lonely', 'isolated', 'confused', 'lost', 'helpless', 'hopeless',
+      'crying', 'sad', 'angry', 'frustrated', 'worried', 'scared',
+      'work-life balance', 'workload', 'pressure', 'deadline', 'conflict'
+    ]
+    
+    const isPersonalProblem = personalProblemKeywords.some(keyword => 
+      message.toLowerCase().includes(keyword)
+    )
+
     // Compose the messages array for Groq API
     const messages = [
       {
@@ -33,13 +47,50 @@ Key Guidelines:
 - Offer actionable suggestions and best practices
 - Keep responses concise but informative
 - Focus on the current section context: ${context}
-- Always respond in a helpful and professional manner`,
+- Always respond in a helpful and professional manner
+- Format your responses using markdown for better readability
+- Use headers (##), bullet points (-), bold text (**), and code blocks when appropriate
+- Structure your responses clearly with proper markdown formatting
+
+**EMPATHETIC RESPONSE GUIDELINES FOR PERSONAL PROBLEMS:**
+When an employee shares personal problems or challenges:
+1. **Show genuine empathy** - Acknowledge their feelings and validate their experience
+2. **Maintain confidentiality** - Remind them that their privacy is protected
+3. **Offer company resources** - Guide them to available support services:
+   - Employee Assistance Program (EAP) - 24/7 confidential counseling
+   - Mental Health Benefits - Coverage for therapy sessions
+   - Work-Life Balance Programs - Flexible scheduling options
+   - Wellness Initiatives - Stress management workshops
+4. **Create action plans** - Help them develop specific, achievable goals:
+   - Break down problems into manageable steps
+   - Set realistic timelines and milestones
+   - Suggest immediate next actions they can take
+   - Encourage self-care and boundary setting
+5. **Provide ongoing support** - Offer to follow up and check in on their progress
+6. **Escalate when needed** - Direct them to HR professionals for serious issues
+
+**RESPONSE STRUCTURE FOR PERSONAL PROBLEMS:**
+- Start with empathy and validation
+- Offer specific company resources and contact information
+- Create a structured action plan with clear steps
+- End with encouragement and support
+
+**COMPANY SUPPORT SERVICES:**
+- **EAP Hotline**: 1-800-EMPLOYEE-HELP (24/7 confidential)
+- **Mental Health Coverage**: Up to 20 therapy sessions per year
+- **Flexible Work Options**: Remote work, adjusted schedules
+- **Wellness Programs**: Stress management, meditation, fitness
+- **HR Support**: Direct contact for serious workplace issues`,
       },
       ...conversationContext,
       {
         role: "user",
         content: message,
       },
+      ...(isPersonalProblem ? [{
+        role: "system",
+        content: "IMPORTANT: The user has shared a personal problem. Respond with empathy, offer company support resources, and create a structured action plan to help them address their challenges. Focus on being supportive and providing practical next steps."
+      }] : []),
     ]
 
     console.log("Making Groq API call with model: llama-3.3-70b-versatile")
@@ -96,7 +147,8 @@ function getContextPrompt(section: string): string {
     - Cost analysis and budget planning
     - Employee satisfaction trends
     - Key performance indicators and trends
-    - Workforce analytics and insights`,
+    - Workforce analytics and insights
+    - Employee support services and wellness programs`,
 
     recruitment: `You're helping with Recruitment processes. You can discuss:
     - Hiring strategies and best practices
@@ -105,7 +157,8 @@ function getContextPrompt(section: string): string {
     - Time-to-hire optimization (current: 29 days)
     - Recruitment analytics and metrics
     - Sourcing strategies and candidate experience
-    - Recruitment technology and tools`,
+    - Recruitment technology and tools
+    - Employee onboarding and integration support`,
 
     onboarding: `You're helping with Employee Onboarding. You can discuss:
     - Onboarding program design
@@ -114,7 +167,8 @@ function getContextPrompt(section: string): string {
     - First-day experiences
     - Onboarding success metrics
     - Employee engagement during onboarding
-    - Onboarding technology and automation`,
+    - Onboarding technology and automation
+    - New employee support and mentorship programs`,
 
     performance: `You're helping with Performance Management. You can discuss:
     - Performance review processes
@@ -123,7 +177,8 @@ function getContextPrompt(section: string): string {
     - Performance improvement plans
     - 360-degree feedback systems
     - Performance metrics and KPIs
-    - Performance management technology`,
+    - Performance management technology
+    - Work-life balance and stress management support`,
 
     learning: `You're helping with Learning & Development. You can discuss:
     - Training program design (76% participation rate)
@@ -132,7 +187,8 @@ function getContextPrompt(section: string): string {
     - Career development paths
     - Professional development planning
     - Learning technology and platforms
-    - Training effectiveness measurement`,
+    - Training effectiveness measurement
+    - Personal growth and wellness workshops`,
 
     engagement: `You're helping with Employee Engagement. You can discuss:
     - Engagement survey strategies (72% participation)
@@ -141,8 +197,9 @@ function getContextPrompt(section: string): string {
     - Work-life balance initiatives (3.8/5 score)
     - Culture and engagement programs
     - Employee recognition programs
-    - Communication and feedback systems`,
+    - Communication and feedback systems
+    - Employee Assistance Program (EAP) and mental health support`,
   }
 
-  return contexts[section as keyof typeof contexts] || "You can help with general HR topics and best practices."
+  return contexts[section as keyof typeof contexts] || "You can help with general HR topics, best practices, and employee support services."
 }
