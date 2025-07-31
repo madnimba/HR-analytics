@@ -2,9 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Force white background on all elements before any content loads */
+html, body, #__next, #root {
+  background-color: white !important;
+  background: white !important;
+}
+
 @layer base {
   :root {
-    --background: 248 250 252;
+    --background: 255 255 255;
     --foreground: 15 23 42;
     --card: 255 255 255;
     --card-foreground: 15 23 42;
@@ -69,9 +75,15 @@
   * {
     @apply border-border;
   }
+  html {
+    background-color: white !important;
+    background: white !important;
+  }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    background-color: white !important;
+    background: white !important;
   }
 }
 

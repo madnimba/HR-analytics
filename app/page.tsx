@@ -13,7 +13,7 @@ function HRDashboardContent() {
   const isMobile = useIsMobile()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       {isMobile ? (
         <div className="flex flex-col h-screen">
           <MobileNavigation activeSection={activeSection} setActiveSection={setActiveSection} />
@@ -25,7 +25,7 @@ function HRDashboardContent() {
         <SidebarProvider defaultOpen={true}>
           <div className="flex h-screen w-full">
             <AppSidebar activeSection={activeSection} setActiveSection={setActiveSection} />
-            <main className="flex-1 overflow-auto bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+            <main className="flex-1 overflow-auto bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
               <DashboardContent activeSection={activeSection} />
             </main>
           </div>
