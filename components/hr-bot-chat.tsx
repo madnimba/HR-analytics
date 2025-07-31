@@ -27,7 +27,7 @@ export function HRBotChat({ currentSection }: HRBotChatProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
-      content: `Hello! I'm your HR Assistant powered by Grok. I can help you with questions about ${getSectionContext(currentSection)}. How can I assist you today?`,
+      content: `Hello! I'm your HR Assistant powered by Groq. I can help you with questions about ${getSectionContext(currentSection)}. How can I assist you today?`,
       role: "assistant",
       timestamp: new Date(),
     },
@@ -50,6 +50,21 @@ export function HRBotChat({ currentSection }: HRBotChatProps) {
       inputRef.current?.focus()
     }
   }, [isOpen, isMinimized])
+
+  // Handle mobile viewport height changes (virtual keyboard)
+  useEffect(() => {
+    const handleResize = () => {
+      // Force re-render when viewport changes
+      if (isOpen) {
+        setTimeout(() => {
+          scrollToBottom()
+        }, 100)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [isOpen])
 
   function getSectionContext(section: string): string {
     const contexts = {
@@ -94,7 +109,7 @@ export function HRBotChat({ currentSection }: HRBotChatProps) {
         throw new Error("Failed to get response")
       }
 
-      // Handle streaming response
+      // Handle streaming response from Groq
       const reader = response.body?.getReader()
       if (!reader) {
         throw new Error("No response body")
@@ -127,8 +142,9 @@ export function HRBotChat({ currentSection }: HRBotChatProps) {
             }
             try {
               const parsed = JSON.parse(data)
-              if (parsed.type === "text-delta") {
-                fullResponse += parsed.textDelta
+              if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta && parsed.choices[0].delta.content) {
+                const content = parsed.choices[0].delta.content
+                fullResponse += content
                 setMessages((prev) =>
                   prev.map((msg) =>
                     msg.id === assistantMessage.id ? { ...msg, content: fullResponse } : msg
@@ -177,28 +193,28 @@ export function HRBotChat({ currentSection }: HRBotChatProps) {
       {!isOpen && (
         <Button
           onClick={toggleChat}
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-300 z-50 group"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-300 z-50 group"
           size="icon"
         >
-          <MessageCircle className="h-6 w-6 text-white group-hover:scale-110 transition-transform" />
-          <div className="absolute -top-2 -right-2 w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
+          <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6 text-white group-hover:scale-110 transition-transform" />
+          <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded-full animate-pulse"></div>
         </Button>
       )}
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed bottom-6 right-6 w-96 h-[500px] shadow-2xl z-50 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-slate-200/60 dark:border-slate-700/60">
-          <CardHeader className="pb-3 border-b border-slate-200/60 dark:border-slate-700/60">
+        <Card className="fixed inset-2 sm:inset-4 md:bottom-6 md:right-6 md:left-auto md:top-auto w-auto h-auto md:w-96 md:h-[500px] max-h-[calc(100vh-1rem)] md:max-h-[500px] shadow-2xl z-50 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-slate-200/60 dark:border-slate-700/60 flex flex-col">
+          <CardHeader className="pb-3 border-b border-slate-200/60 dark:border-slate-700/60 flex-shrink-0">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-white" />
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
+                  <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg text-slate-800 dark:text-slate-200">HR Assistant</CardTitle>
+                  <CardTitle className="text-base sm:text-lg text-slate-800 dark:text-slate-200">HR Assistant</CardTitle>
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-xs text-slate-600 dark:text-slate-400">Powered by Grok</span>
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-xs text-slate-600 dark:text-slate-400">Powered by Groq</span>
                   </div>
                 </div>
               </div>
@@ -207,21 +223,21 @@ export function HRBotChat({ currentSection }: HRBotChatProps) {
                   variant="ghost"
                   size="icon"
                   onClick={toggleMinimize}
-                  className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-700"
+                  className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-slate-100 dark:hover:bg-slate-700"
                 >
                   {isMinimized ? (
-                    <Maximize2 className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                    <Maximize2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-600 dark:text-slate-400" />
                   ) : (
-                    <Minimize2 className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                    <Minimize2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-600 dark:text-slate-400" />
                   )}
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={toggleChat}
-                  className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-700"
+                  className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-slate-100 dark:hover:bg-slate-700"
                 >
-                  <X className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                  <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-600 dark:text-slate-400" />
                 </Button>
               </div>
             </div>
@@ -232,27 +248,27 @@ export function HRBotChat({ currentSection }: HRBotChatProps) {
 
           {!isMinimized && (
             <>
-              <CardContent className="p-0 flex-1">
-                <ScrollArea className="h-[340px] p-4">
-                  <div className="space-y-4">
+              <CardContent className="p-0 flex-1 min-h-0">
+                <ScrollArea className="h-full p-3 sm:p-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {messages.map((message) => (
                       <div
                         key={message.id}
-                        className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                        className={`flex gap-2 sm:gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
                       >
                         {message.role === "assistant" && (
-                          <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
-                            <Bot className="w-4 h-4 text-white" />
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                           </div>
                         )}
                         <div
-                          className={`max-w-[280px] rounded-2xl px-4 py-2 ${
+                          className={`max-w-[calc(100vw-6rem)] sm:max-w-[280px] rounded-2xl px-3 py-2 sm:px-4 ${
                             message.role === "user"
                               ? "bg-blue-600 text-white ml-auto"
                               : "bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200"
                           }`}
                         >
-                          <p className="text-sm leading-relaxed">{message.content}</p>
+                          <p className="text-sm leading-relaxed break-words">{message.content}</p>
                           <p
                             className={`text-xs mt-1 ${
                               message.role === "user" ? "text-blue-100" : "text-slate-500 dark:text-slate-400"
@@ -265,26 +281,26 @@ export function HRBotChat({ currentSection }: HRBotChatProps) {
                           </p>
                         </div>
                         {message.role === "user" && (
-                          <div className="w-8 h-8 bg-gradient-to-r from-slate-600 to-slate-700 rounded-full flex items-center justify-center flex-shrink-0">
-                            <User className="w-4 h-4 text-white" />
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-slate-600 to-slate-700 rounded-full flex items-center justify-center flex-shrink-0">
+                            <User className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                           </div>
                         )}
                       </div>
                     ))}
                     {isLoading && (
-                      <div className="flex gap-3 justify-start">
-                        <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
-                          <Bot className="w-4 h-4 text-white" />
+                      <div className="flex gap-2 sm:gap-3 justify-start">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
+                          <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                         </div>
-                        <div className="bg-slate-100 dark:bg-slate-700 rounded-2xl px-4 py-2">
+                        <div className="bg-slate-100 dark:bg-slate-700 rounded-2xl px-3 py-2 sm:px-4">
                           <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
+                            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-slate-400 rounded-full animate-bounce"></div>
                             <div
-                              className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"
+                              className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-slate-400 rounded-full animate-bounce"
                               style={{ animationDelay: "0.1s" }}
                             ></div>
                             <div
-                              className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"
+                              className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-slate-400 rounded-full animate-bounce"
                               style={{ animationDelay: "0.2s" }}
                             ></div>
                           </div>
@@ -296,7 +312,7 @@ export function HRBotChat({ currentSection }: HRBotChatProps) {
                 </ScrollArea>
               </CardContent>
 
-              <div className="p-4 border-t border-slate-200/60 dark:border-slate-700/60">
+              <div className="p-3 sm:p-4 border-t border-slate-200/60 dark:border-slate-700/60 flex-shrink-0">
                 <div className="flex gap-2">
                   <Input
                     ref={inputRef}
@@ -304,13 +320,13 @@ export function HRBotChat({ currentSection }: HRBotChatProps) {
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Ask me anything about HR..."
-                    className="flex-1 bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600"
+                    className="flex-1 bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-sm"
                     disabled={isLoading}
                   />
                   <Button
                     onClick={handleSendMessage}
                     disabled={!inputValue.trim() || isLoading}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    className="bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0"
                     size="icon"
                   >
                     <Send className="h-4 w-4" />

@@ -3,21 +3,25 @@ import { xai } from "@ai-sdk/xai"
 
 export async function POST(req: Request) {
   try {
-    // Check if XAI_API_KEY is available
-    if (!process.env.XAI_API_KEY) {
-      console.error("XAI_API_KEY is not set")
+    if (!process.env.GROQ_API_KEY) {
+      console.error("GROQ_API_KEY is not set")
       return Response.json({ error: "API key not configured" }, { status: 500 })
     }
 
     const { message, context, conversationHistory } = await req.json()
 
-    // Build conversation context
     const contextPrompt = getContextPrompt(context)
     const conversationContext = conversationHistory
-      .map((msg: any) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`)
-      .join("\n")
+      .map((msg: any) => ({
+        role: msg.role,
+        content: msg.content,
+      }))
 
-    const systemPrompt = `You are an expert HR Assistant for FutureTech, a company with 3,000 employees. You have access to comprehensive HR data and analytics.
+    // Compose the messages array for Groq API
+    const messages = [
+      {
+        role: "system",
+        content: `You are an expert HR Assistant for FutureTech, a company with 3,000 employees. You have access to comprehensive HR data and analytics.
 
 ${contextPrompt}
 
@@ -29,34 +33,51 @@ Key Guidelines:
 - Offer actionable suggestions and best practices
 - Keep responses concise but informative
 - Focus on the current section context: ${context}
+- Always respond in a helpful and professional manner`,
+      },
+      ...conversationContext,
+      {
+        role: "user",
+        content: message,
+      },
+    ]
 
-Previous conversation:
-${conversationContext}
-
-Current user message: ${message}`
-
-    console.log("Making XAI API call with model: x-1")
+    console.log("Making Groq API call with model: llama-3.3-70b-versatile")
     
-    try {
-      const result = await streamText({
-        model: xai("x-1"),
-        system: systemPrompt,
-        prompt: message,
-        maxTokens: 500,
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages,
+        max_tokens: 500,
         temperature: 0.7,
-      })
+        stream: true,
+      }),
+    })
 
-      console.log("XAI API call successful, returning streaming response")
-      
-      // Return the streaming response directly
-      return result.toDataStreamResponse()
-    } catch (xaiError) {
-      console.error("XAI API Error:", xaiError)
+    if (!response.ok) {
+      const error = await response.json()
+      console.error("Groq API Error:", error)
       return Response.json({ 
-        error: "XAI API call failed", 
-        details: xaiError instanceof Error ? xaiError.message : "Unknown error"
+        error: "Groq API call failed", 
+        details: error.error?.message || "Unknown error"
       }, { status: 500 })
     }
+
+    console.log("Groq API call successful, returning streaming response")
+    
+    // Return the streaming response directly
+    return new Response(response.body, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      },
+    })
   } catch (error) {
     console.error("HR Bot API Error:", error)
     return Response.json({ 
@@ -73,42 +94,54 @@ function getContextPrompt(section: string): string {
     - Turnover rates (13.8%), attendance (94.2%)
     - Performance ratings (4.2/5), eNPS (+42)
     - Cost analysis and budget planning
-    - Employee satisfaction trends`,
+    - Employee satisfaction trends
+    - Key performance indicators and trends
+    - Workforce analytics and insights`,
 
     recruitment: `You're helping with Recruitment processes. You can discuss:
     - Hiring strategies and best practices
     - Candidate pipeline management
     - Interview processes and evaluation
     - Time-to-hire optimization (current: 29 days)
-    - Recruitment analytics and metrics`,
+    - Recruitment analytics and metrics
+    - Sourcing strategies and candidate experience
+    - Recruitment technology and tools`,
 
     onboarding: `You're helping with Employee Onboarding. You can discuss:
     - Onboarding program design
     - New hire orientation processes
     - Integration strategies
     - First-day experiences
-    - Onboarding success metrics`,
+    - Onboarding success metrics
+    - Employee engagement during onboarding
+    - Onboarding technology and automation`,
 
     performance: `You're helping with Performance Management. You can discuss:
     - Performance review processes
     - Goal setting and tracking (89% achievement rate)
     - Skill gap analysis and development
     - Performance improvement plans
-    - 360-degree feedback systems`,
+    - 360-degree feedback systems
+    - Performance metrics and KPIs
+    - Performance management technology`,
 
     learning: `You're helping with Learning & Development. You can discuss:
     - Training program design (76% participation rate)
     - Skill development initiatives
     - Learning analytics and ROI (current ROI: 165%)
     - Career development paths
-    - Professional development planning`,
+    - Professional development planning
+    - Learning technology and platforms
+    - Training effectiveness measurement`,
 
     engagement: `You're helping with Employee Engagement. You can discuss:
     - Engagement survey strategies (72% participation)
     - Employee satisfaction improvement (4.0/5 score)
     - Retention strategies
     - Work-life balance initiatives (3.8/5 score)
-    - Culture and engagement programs`,
+    - Culture and engagement programs
+    - Employee recognition programs
+    - Communication and feedback systems`,
   }
 
   return contexts[section as keyof typeof contexts] || "You can help with general HR topics and best practices."
